@@ -17,8 +17,8 @@ main =
 
 -- MODEL
 type alias Vector =
-    { x : Int
-    , y : Int
+    { x : Float
+    , y : Float
     }
 
 zeroVector = { x = 0, y = 0}
@@ -26,12 +26,12 @@ zeroVector = { x = 0, y = 0}
 type alias Model =
     { position : Vector
     , velocity : Vector
-    , width : Int
-    , height : Int
+    , width : Float
+    , height : Float
     }
 
 -- INIT
-init : (Int, Int) -> (Model, Cmd Msg)
+init : (Float, Float) -> (Model, Cmd Msg)
 init (width, height) =
     ( { position = zeroVector, velocity = zeroVector, width = width, height = height }
     , Cmd.none
@@ -41,7 +41,6 @@ init (width, height) =
 type Msg
     = Key KeyType
     | Resize (Int, Int)
-    | TimeStep 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -51,7 +50,7 @@ update msg model =
             , Cmd.none
             )
         Resize (width, height) ->
-            ( boundsCheck { model | width = width * 95 // 100, height = height * 95 // 100 }
+            ( boundsCheck { model | width = (toFloat width) * 0.95, height = (toFloat height) * 0.95 }
             , Cmd.none
             )
 
@@ -73,7 +72,7 @@ boundsCheck model =
     in
     { model | position = {x = x, y = y}}
 
-checker: Int -> Int -> Int -> Int
+checker: Float -> Float -> Float -> Float
 checker lower upper x =
     if x < lower then
         lower
@@ -87,10 +86,10 @@ checker lower upper x =
 view: Model -> Browser.Document Msg
 view model =
     let 
-        x = String.fromInt model.position.x
-        y = String.fromInt model.position.y
-        width = String.fromInt model.width
-        height = String.fromInt model.height
+        x = String.fromFloat model.position.x
+        y = String.fromFloat model.position.y
+        width = String.fromFloat model.width
+        height = String.fromFloat model.height
     in
     { title = "Square Adventures"
     , body = [
@@ -160,14 +159,14 @@ toDirection string =
         _ ->
             Other
 
-keyToBumpX : KeyType -> Int
+keyToBumpX : KeyType -> Float
 keyToBumpX k =
     case k of
         Left -> -20
         Right -> 20
         _ -> 0
 
-keyToBumpY : KeyType -> Int
+keyToBumpY : KeyType -> Float
 keyToBumpY k =
     case k of
         Up -> -20
