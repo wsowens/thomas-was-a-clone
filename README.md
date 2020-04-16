@@ -1,3 +1,3 @@
-# Scale of Time
-Like Scale of the Universe, but with time.
+# Thomas was a Clone
+Test platformer, created with Elm.
 
