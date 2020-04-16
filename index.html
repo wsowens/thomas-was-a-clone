@@ -3,6 +3,33 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Le Clock</title>
+	<style>
+		h1, p {
+			font-family: "Trebuchet MS", Helvetica, sans-serif;
+			color: #FBFFFF;
+			position: absolute;
+			z-index: 2;
+		}
+		p {
+			position: absolute;
+			left: 100px;
+			top: 0px;
+		}
+		rect {
+			fill:#BC4E3F;
+		}
+		polygon {
+			fill: #00000080;
+		}
+		svg {
+			filter: blur(2px);
+			border: 1px solid black; 
+			margin: auto 2%;
+		}
+		body {
+			background: linear-gradient(165deg, rgb(82, 99, 168), #273059) fixed;
+		}
+	</style>
 	<script src="main.js"></script>
 </head>
 <body>
