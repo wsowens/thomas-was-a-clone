@@ -22,14 +22,19 @@ type alias Vector =
     , y : Float
     }
 
+zeroVector = { x = 0, y = 0 }
+
+mag : Vector -> Float
+mag v = sqrt (v.x ^ 2 + v.y ^ 2)
+
+toString : Vector -> String
+toString v = (String.fromFloat v.x) ++ "," ++ (String.fromFloat v.y)
+
 type alias Square =
     { pos : Vector
     , vel : Vector
     , size : Vector
     }
-
-zeroVector = { x = 0, y = 0 }
-defaultSize = { x = 50, y = 100 }
 
 type State
     = Active
@@ -42,8 +47,6 @@ type alias MoveInputs =
     , right : State
     }
 
-start = { up = Inactive, down = Inactive, left = Inactive, right = Inactive}
-
 type alias Model =
     { square : Square
     , width : Float
@@ -52,6 +55,10 @@ type alias Model =
     }
 
 -- INIT
+
+defaultSize = { x = 50, y = 100 }
+start = { up = Inactive, down = Inactive, left = Inactive, right = Inactive}
+
 init : (Float, Float) -> (Model, Cmd Msg)
 init (width, height) =
     ({ width = width
@@ -79,16 +86,16 @@ update msg model =
             ( boundsCheck { model | width = (toFloat width) * 0.95, height = (toFloat height) * 0.95 }
             , Cmd.none
             )
-        Tick d ->
-            ( boundsCheck { model | square = (timeStep model.square model.inputs d) }
-            , Cmd.none
-            )
         KeyEvent (k, s) ->
             let
                 inputs = handleKey (model.inputs) k s
-                square = jump (inputs.up == Active && model.inputs.up == Inactive ) model.square
+                square = jump ( inputs.up == Active && model.inputs.up == Inactive ) model.square
             in
             ( { model | inputs = inputs, square = square }
+            , Cmd.none
+            )
+        Tick d ->
+            ( boundsCheck { model | square = (timeStep model.square model.inputs d) }
             , Cmd.none
             )
 
@@ -107,11 +114,31 @@ boundsCheck model =
 checker: Float -> Float -> Float -> Float -> (Float, Float)
 checker lower upper x vel =
     if x < lower then
-        (lower, 0)
+        (lower, vel * -0.2)
     else if x > upper then
-        (upper, 0)
+        (upper, vel * -0.2)
     else
         (x, vel)
+
+handleKey : MoveInputs -> KeyType -> State -> MoveInputs
+handleKey inputs k s =
+    case k of
+        Up -> { inputs | up = s }
+        Down -> { inputs | down = s }
+        Left -> { inputs | left = s }
+        Right -> { inputs | right = s }
+        Nop -> inputs
+
+jump_speed = 2.0 * -1
+jump : Bool -> Square -> Square
+jump doJump square =
+    if doJump then
+        let 
+            vel = { x = square.vel.x, y = jump_speed}
+        in
+        { square | vel = vel }
+    else
+        square
 
 gravity = 0.005
 maxspeed = 1.2
@@ -121,10 +148,6 @@ timeStep : Square -> MoveInputs -> Float -> Square
 timeStep square inputs delta =
     let
         (velx, accx) =
-            {-
-                Handling in order:
-                player moving left
-            -}
             case (inputs.left, inputs.right, compare square.vel.x 0) of
                 -- no movement desired, already still
                 (Inactive, Inactive, EQ) -> (0, 0)
@@ -171,106 +194,47 @@ timeStep square inputs delta =
     in
     { square | pos = {x = posx, y = posy }, vel = {x = velx, y = vely} }
 
-jump_speed = 2.0 * -1
-
-jump : Bool -> Square -> Square
-jump isJump square =
-    if isJump then
-        let 
-            vel = { x = square.vel.x, y = jump_speed}
-        in
-        { square | vel = vel }
-    else
-        square
-
-handleKey : MoveInputs -> KeyType -> State -> MoveInputs
-handleKey inputs k s =
-    {--
-    let 
-        _ = Debug.log (if s == Active then "Pressed: " else "Release: ") (keyName k)
-    in
-    --}
-    case k of
-        Up -> { inputs | up = s }
-        Down -> { inputs | down = s }
-        Left -> { inputs | left = s }
-        Right -> { inputs | right = s }
-        Other -> inputs
-
-
 -- VIEW
+
 view: Model -> Browser.Document Msg
 view model =
-    let 
-        x = String.fromFloat model.square.pos.x
-        y = String.fromFloat model.square.pos.y
-        squareX = String.fromFloat model.square.size.x
-        squareY = String.fromFloat model.square.size.y
-        width = String.fromFloat model.width
-        height = String.fromFloat model.height
-    in
     { title = "Lonely tom"
     , body = 
-        [ Html.h1 [] [ Html.text "thom lonely is" ]
-        , Html.p [] [ Html.text "Use WASD or arrow key" ]
-        , Svg.svg
-            [ Attr.width width
-            , Attr.height height
-            ]
-            [ shadow model
-            , Svg.rect [ Attr.width squareX, Attr.height squareY, Attr.x x, Attr.y y] []
-            ]
+        [ Html.h1 [] [ Html.text "thom lonely is" ], Html.p [] [ Html.text "Use WASD or arrow key" ]
+        , Svg.svg [Attr.width (String.fromFloat model.width), Attr.height (String.fromFloat model.height)] 
+            [ drawShadow model, drawSquare model.square ]
         ]
     }
 
--- shadow : Model -> Svg.msg
-shadow model =
+drawSquare : Square -> Svg.Svg msg
+drawSquare s = 
+    Svg.rect [ Attr.width (String.fromFloat s.size.x), Attr.height (String.fromFloat s.size.y),
+               Attr.x (String.fromFloat s.pos.x), Attr.y (String.fromFloat s.pos.y) ] []
+
+drawShadow : Model -> Svg.Svg msg
+drawShadow model =
     let
-        x1 = model.square.pos.x
-        y1 = model.square.pos.y + model.square.size.y
-        x2 = model.square.pos.x + model.square.size.x
-        y2 = model.square.pos.y
+        p1 = Vector   model.square.pos.x ( model.square.pos.y + model.square.size.y )
+        p2 = Vector ( model.square.pos.x + model.square.size.x ) model.square.pos.y
         width = model.width
         height = model.height
-
-        (intersectX1, intersectY1) = (rayIntersect x1 y1 width height) 
-        (intersectX2, intersectY2) = (rayIntersect x2 y2 width height) 
+        intersect1 = (rayIntersect p1 width height)
+        intersect2 = (rayIntersect p2 width height) 
+        points = List.map toString [p1, intersect1, {x = width, y = height}, intersect2, p2]
     in
-    Svg.g [] 
-    [ Svg.polygon [
-        Attr.points (
-                    String.join " " 
-                    [ point (x1, y1)
-                    , point (rayIntersect x1 y1 width height)
-                    , point (width, height)
-                    , point (rayIntersect x2 y2 width height)
-                    , point (x2, y2)
-                    ]
-                )
-        ]
-        [] {--
-    , Svg.line [ Attr.x1 (String.fromFloat x1), Attr.y1 (String.fromFloat y1), Attr.x2 (String.fromFloat intersectX1), Attr.y2 (String.fromFloat intersectY1)] []
-    , Svg.line [ Attr.x1 (String.fromFloat x2), Attr.y1 (String.fromFloat y2), Attr.x2 (String.fromFloat intersectX2), Attr.y2 (String.fromFloat intersectY2)] []
-    --}
-    ]
+    Svg.polygon [Attr.points (String.join " " points)] []
 
-point : (Float, Float) -> String
-point (x, y) =
-    (String.fromFloat x) ++ "," ++ (String.fromFloat y)
-
-rayIntersect : Float -> Float -> Float -> Float -> (Float, Float)
-rayIntersect x y width height =
+rayIntersect : Vector -> Float -> Float -> Vector
+rayIntersect v width height =
     let
-        yIntersect = (y / x) * width
-        xIntersect = (x / y) * height
-        mag1 = xIntersect ^ 2 + height ^ 2
-        mag2 = yIntersect ^ 2 + width  ^ 2
+        intersect1 = {x = width, y = (v.y / v.x) * width}
+        intersect2 = {x = (v.x / v.y) * height, y = height}
     in
-    if mag1 < mag2 then
-        (xIntersect, height)
+    -- the lower of the two points means less off-screen rendering
+    if (mag intersect1) < (mag intersect2) then
+        intersect1
     else
-        (width, yIntersect)
-
+        intersect2
 
 -- SUBS
 subscriptions : Model -> Sub Msg
@@ -288,52 +252,35 @@ type KeyType
     | Right
     | Up
     | Down
-    | Other
+    | Nop
 
 keyDown k = KeyEvent (k, Active)
 keyUp k = KeyEvent (k, Inactive)
 
-keyName: KeyType -> String
-keyName k =
-    case k of
-    Left  -> "Left"
-    Right -> "Right"
-    Up    -> "Up"
-    Down  -> "Down"
-    Other -> "Other"
-
 keyDecoder : Decode.Decoder KeyType
 keyDecoder =
-    Decode.map toDirection (Decode.field "key" Decode.string)
+    Decode.map toDirection <| Decode.map String.toLower <| Decode.field "key" Decode.string
 
 toDirection : String -> KeyType
 toDirection string =
     case string of
-        "A" ->
-            Left
         "a" ->
             Left
-        "ArrowLeft" ->
+        "arrowleft" ->
             Left
         "d" ->
             Right
-        "D" ->
+        "arrowright" ->
             Right
-        "ArrowRight" ->
-            Right
-        "W" ->
-            Up
         "w" ->
             Up
-        "ArrowUp" ->
+        "arrowup" ->
             Up
-        "S" ->
-            Down
         "s" ->
             Down
-        "ArrowDown" ->
+        "arrowdown" ->
             Down
         " " ->
             Up
         _ ->
-            Other
+            Nop
