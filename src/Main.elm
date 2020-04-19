@@ -200,7 +200,7 @@ view: Model -> Browser.Document Msg
 view model =
     { title = "Lonely tom"
     , body = 
-        [ Html.h1 [] [ Html.text "thom lonely is" ], Html.p [] [ Html.text "Use WASD or arrow key" ]
+        [ Html.h1 [] [ Html.text "Thomas was a Clone" ], Html.p [] [ Html.text "Use WASD or arrow keys" ]
         , Svg.svg [Attr.width (String.fromFloat model.width), Attr.height (String.fromFloat model.height)] 
             [ drawShadow model, drawSquare model.square ]
         ]
