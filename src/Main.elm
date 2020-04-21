@@ -127,7 +127,6 @@ handleKey inputs k s =
         Down -> { inputs | down = s }
         Left -> { inputs | left = s }
         Right -> { inputs | right = s }
-        Nop -> inputs
 
 jump_speed = 2.0 * -1
 jump : Bool -> Square -> Square
@@ -252,35 +251,34 @@ type KeyType
     | Right
     | Up
     | Down
-    | Nop
 
 keyDown k = KeyEvent (k, Active)
 keyUp k = KeyEvent (k, Inactive)
 
 keyDecoder : Decode.Decoder KeyType
 keyDecoder =
-    Decode.map toDirection <| Decode.map String.toLower <| Decode.field "key" Decode.string
+    Decode.field "key" Decode.string |> Decode.andThen toDirection
 
-toDirection : String -> KeyType
+toDirection : String -> Decode.Decoder KeyType
 toDirection string =
-    case string of
+    case String.toLower string of
         "a" ->
-            Left
+            Decode.succeed Left
         "arrowleft" ->
-            Left
+            Decode.succeed Left
         "d" ->
-            Right
+            Decode.succeed Right
         "arrowright" ->
-            Right
+            Decode.succeed Right
         "w" ->
-            Up
+            Decode.succeed Up
         "arrowup" ->
-            Up
+            Decode.succeed Up
         "s" ->
-            Down
+            Decode.succeed Down
         "arrowdown" ->
-            Down
+            Decode.succeed Down
         " " ->
-            Up
+            Decode.succeed Up
         _ ->
-            Nop
+            Decode.fail "invalid key"
